@@ -25,7 +25,7 @@
 
 from EmPyreAI.EmpireUser import EmpireUser
 from EmPyreAI.EmpireGroup import EmpireGroup
-import EmpyreAI.EmpireUtils as EUtils
+import EmPyreAI.EmpireUtils as EUtils
 import os
 import getpass
 import sys

@@ -1,5 +1,5 @@
 # Test scripts should not be committed to this repository
-test_*
+test_scripts/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

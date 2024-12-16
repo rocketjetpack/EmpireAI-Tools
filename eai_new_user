@@ -20,6 +20,7 @@
 #   1 = Unknown Error
 #   100 = Missing argument
 #   101 = User already exists in Base Command/LDAP
+#   102 = Attempting to add a user to an invalid group
 #
 # Author: Kali McLennan (Flatiron Institute) - kmclennan@flatironinstitute.org
 
@@ -148,6 +149,11 @@ if __name__ == "__main__":
         sys.exit(1)
 
     new_user_data = ParseArgs()
+
+    targetGroup = EmpireGroup(new_user_data["institution"])
+    if targetGroup.CanChange(getpass.getuser()) == False:
+        print(f"[\033[31m ERROR\033[0m ] You are only allowed to add users for your institution.")
+        sys.exit(102)
 
     if not EmpireUser.Exists(new_user_data["username"]):
         try:

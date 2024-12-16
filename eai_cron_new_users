@@ -1,0 +1,66 @@
+#!/usr/bin/env python3
+
+# This script processes users in Nvidia Base Command's user list to ensure that
+# each user has all necessary directories created as well as a presence in the
+# Slurm accounting database.
+#
+# Arguments: None
+#
+# This makes use of the EmpyreAI module and ultimately the Base Command API
+#   to provide user management capabilities to coordinators without requiring
+#   elevated privileges on the cluster.
+#
+# Return Codes: None
+#
+# Author: Kali McLennan (Flatiron Institute) - kmclennan@flatironinstitute.org
+
+
+from EmPyreAI.EmpireUser import EmpireUser
+from EmPyreAI.EmpireGroup import EmpireGroup
+import EmPyreAI.EmpireUtils as EUtils
+import os
+import getpass
+import sys
+from prettytable import PrettyTable
+import json
+import paramiko
+import subprocess
+import shlex
+
+created_dirs = []
+
+if __name__ == "__main__":
+    for institution in ['cuny', 'suny', 'columbia', 'cornell', 'rpi', 'nyu']:
+        thisGroup = EmpireGroup(institution)
+        for groupMember in thisGroup.members:
+            hostname = "alpha1"
+            username = "root"
+            key = "/root/.ssh/id_ecdsa"
+            ssh = paramiko.SSHClient()
+            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            ssh.connect(hostname, username=username, key_filename=key)
+            directory = f"/mnt/lustre/{institution}/{groupMember}"
+
+            command = f"if [ -d '{directory}' ]; then echo 'exists'; else echo 'create'; fi"
+            stdin, stdout, stderr = ssh.exec_command(command)
+            result = stdout.read().decode().strip()
+
+            if result == "create":
+                mkdirCmd = f"mkdir {directory}"
+                chownCmd = f"chown {groupMember}:{institution} {directory}"
+                ssh.exec_command(mkdirCmd)
+                ssh.exec_command(chownCmd)
+                created_dirs.append(groupMember)
+            ssh.close()
+
+            # Create the slurm user if missing
+            environ = os.environ.copy()
+            environ["SLURM_CONF"] = "/cm/shared/apps/slurm/var/etc/slurm/slurm.conf"
+            cmd = f"/cm/shared/apps/slurm/current/bin/sacctmgr -i create user name={groupMember} cluster=slurm account={institution} qos=normal,{institution} defaultqos={institution}"
+            result =  subprocess.run(shlex.split(cmd), capture_output=True, text=True)
+            if result.returncode == 0:
+                print(f"Created a Slurm user for {groupMember} in the {institution} account.")
+
+    for dir in created_dirs:
+        print(f"Created {dir}")
+

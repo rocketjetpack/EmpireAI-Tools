@@ -1,0 +1,190 @@
+#!/usr/bin/env python3
+
+# This utility will create a new EmpireAI user.
+#
+# Arguments:
+#   --firstname
+#   --lastname
+#   --phone
+#   --email
+#   --username
+#   --institution
+#   --interactive
+#
+# This makes use of the EmpyreAI module and ultimately the Base Command API
+#   to provide user management capabilities to coordinators without requiring
+#   elevated privileges on the cluster.
+#
+# Return Codes:
+#   0 = Success
+#   1 = Unknown Error
+#   100 = Missing argument
+#   101 = User already exists in Base Command/LDAP
+#
+# Author: Kali McLennan (Flatiron Institute) - kmclennan@flatironinstitute.org
+
+from EmPyreAI.EmpireUser import EmpireUser
+from EmPyreAI.EmpireGroup import EmpireGroup
+import EmpyreAI.EmpireUtils as EUtils
+import os
+import getpass
+import sys
+from prettytable import PrettyTable
+import argparse as ap
+import json
+import subprocess
+import jinja2
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
+def GatherData():
+    data = {}
+    # Prompt the user for all the required information
+    data["firstname"] = input("Enter the users first name: ")
+    data["lastname"] = input("Enter the users last name: ")
+    data["email"] = input("Enter the users email address: ")
+    data["phone"] = input("Enter the users phone number: ")
+    data["institution"] = input("Enter the users institution: ")
+    data["username"] = input("Enter the desired username: ")
+
+    if data["institution"] not in ['cuny', 'suny', 'columbia', 'cornell', 'rpi', 'nyu']:
+        print("[\033[31m ERROR\033[0m ] The specified institution is invalid. It must be one of ['cuny', 'suny', 'columbia', 'cornell', 'rpi', 'nyu'].")
+        sys.exit(100)
+
+    return data
+
+
+
+def ParseArgs():
+    parser = ap.ArgumentParser()
+    parser.add_argument("-u", "--username", type=str, help="The username.", action="store")
+    parser.add_argument("-f", "--firstname", type=str, help="The users first name.", action="store")
+    parser.add_argument("-l", "--lastname", type=str, help="The users last name.", action="store")
+    parser.add_argument("-e", "--email", type=str, help="The users email address.", action="store")
+    parser.add_argument("-p", "--phone", type=str, help="The users phone number.", action="store")
+    parser.add_argument("-i", "--institution", type=str, help="The users instituion", action="store")
+    parser.add_argument("-I", "--interactive", help="Run interactively", action="store_true")
+    #parser.add_argument("-P", "--project", type=str, help="The users project", action="store")
+    parser.add_argument("-x", "--no-slurm", help="Skip adding the new user to Slurm.", action="store_true")
+    args = parser.parse_args()
+
+    input_data = {}
+
+    if args.interactive == True:
+        input_data = GatherData()
+    else:
+        if args.username == None:
+            print("[\033[31m ERROR\033[0m ] The username is a required flag. Please use [-u|--username] to provide this information.")
+            sys.exit(100)
+        else:
+            input_data["username"] = args.username
+
+        if args.firstname == None:
+            print("[\033[31m ERROR\033[0m ] The users first name is a required flag. Please use [-f|--firstname] to provide this information.")
+            sys.exit(100)
+        else:
+            input_data["firstname"] = args.firstname
+
+        if args.lastname == None:
+            print("[\033[31m ERROR\033[0m ] The users last name is a required flag. Please use [-l|--lastname] to provide this information.")
+            sys.exit(100)
+        else:
+            input_data["lastname"] = args.lastname
+
+        if args.email == None:
+            print("[\033[31m ERROR\033[0m ] The users email address is a required flag. Please use [-e|--email] to provide this information.")
+            sys.exit(100)
+        else:
+            input_data["email"] = args.email
+
+        if args.phone == None:
+            print("[\033[31m ERROR\033[0m ] The users phone number is a required flag. Please use [-p|--phone] to provide this information.")
+            sys.exit(100)
+        else:
+            input_data["phone"] = args.phone
+
+        if args.institution == None:
+            print("[\033[31m ERROR\033[0m ] The users institution is a required flag. Please use [-i|--institution] to provide this information.")
+            sys.exit(100)
+        else:
+            if args.institution not in ['cuny', 'suny', 'columbia', 'cornell', 'rpi', 'nyu']:
+                print("[\033[31m ERROR\033[0m ] The specified institution is invalid. It must be one of ['cuny', 'suny', 'columbia', 'cornell', 'rpi', 'nyu'].")
+                sys.exit(100)  
+            input_data["institution"] = args.institution
+
+    #if args.project == None:
+    #    print("The users project is a required flag. Please use [-P|--project] to provide this information.")
+    #    sys.exit(100)
+
+    return input_data
+
+def SendWelcomeMail(firstname, username, institution, email):
+    environment = jinja2.Environment(loader=jinja2.FileSystemLoader("/usr/share/empireai/templates"))
+    template = environment.get_template("new_user.j2")
+    content = template.render(firstname=firstname, username=username, institution=institution)
+    smtp_server = "alpha-mgr"
+    smtp_port = 25
+    from_email = "help@empire-ai.org"
+    to_email = email
+    subject = "Empire AI Alpha Account Creation Notice"
+
+    message = MIMEMultipart("alternative")
+    message["From"] = from_email
+    message["To"] = to_email
+    message["Subject"] = subject
+    mime_text = MIMEText(content, "html")
+    message.attach(mime_text)
+    try:
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.sendmail(from_email, to_email, message.as_string())
+        print(f"[\033[32m SUCCESS\033[0m ] Sent a welcome email to {email}.")
+    except Exception as e:
+        print(f"[\033[31m ERROR\033[0m ] Failed to send a welcome email to {email}. Error details: {e}.")
+
+if __name__ == "__main__":
+    if not (EUtils.CheckAPI()):
+        print("At least one API access key or certificate file is not present. You will not be able to interact with the Base Command API without these files.")
+        sys.exit(1)
+
+    new_user_data = ParseArgs()
+
+    if not EmpireUser.Exists(new_user_data["username"]):
+        try:
+            # Create the new user, then fetch the user object for modification
+            EmpireUser.New(new_user_data["username"])
+        except:
+            print(f"Failed to create a new User object named " + new_user_data["username"] + " via the Base Command API.")
+        
+        newUser = EmpireUser(new_user_data["username"])
+
+        #Construct a dict of values to set for the new user
+        data = {}
+        data["commonName"] = new_user_data["firstname"]
+        data["surname"] = new_user_data["lastname"]
+        data["email"] = new_user_data["email"]
+        note_dict = newUser.notes
+        note_dict["phone"] = new_user_data["phone"]
+        #note_dict["project"] = args.project
+        data["notes"] = json.dumps(note_dict)
+        data["password"] = EUtils.GenPassword(28)
+        newUser.SetUserData(data)
+
+        print("[\033[32m SUCCESS\033[0m ] Created a new user with the following information:\n")
+        table = PrettyTable()
+        table.field_names = ["Username", "First Name", "Last Name", "Email", "Phone", "Institution"]
+        table.add_row([newUser.username, newUser.firstname, newUser.lastname, newUser.email, newUser.phone, new_user_data["institution"]])
+        print(table)
+        print("\n[\033[33m NOTICE\033[0m ] The users account will be added to Slurm during the next cron cycle.")
+
+        newUser.AddToGroup(new_user_data["institution"], force=True)
+        SendWelcomeMail(newUser.firstname, newUser.username, new_user_data["institution"], newUser.email)
+
+        sys.exit(0)
+
+    else:
+        print(f"[\033[31m ERROR\033[0m ] The user " + new_user_data["username"] + " already exists in LDAP.")
+        sys.exit(101)
+        
+    # We have exited in some weird condition if we reach this code, set the exit code on the way out
+    sys.exit(1)

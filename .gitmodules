@@ -1,0 +1,3 @@
+[submodule "EmPyreAI"]
+	path = EmPyreAI
+	url = ./EmPyreAI

@@ -64,9 +64,9 @@ def ParseArgs():
     parser.add_argument("-l", "--lastname", type=str, help="The users last name.", action="store")
     parser.add_argument("-e", "--email", type=str, help="The users email address.", action="store")
     parser.add_argument("-p", "--phone", type=str, help="The users phone number.", action="store")
+    parser.add_argument("-P", "--pi", type=str, help="The users PI, either by username or by Firstname Lastname", action="store")
     parser.add_argument("-i", "--institution", type=str, help="The users instituion", action="store")
     parser.add_argument("-I", "--interactive", help="Run interactively", action="store_true")
-    #parser.add_argument("-P", "--project", type=str, help="The users project", action="store")
     parser.add_argument("-x", "--no-slurm", help="Skip adding the new user to Slurm.", action="store_true")
     args = parser.parse_args()
 
@@ -114,9 +114,8 @@ def ParseArgs():
                 sys.exit(100)  
             input_data["institution"] = args.institution
 
-    #if args.project == None:
-    #    print("The users project is a required flag. Please use [-P|--project] to provide this information.")
-    #    sys.exit(100)
+        if args.pi != None: input_data["pi"] = args.pi
+        else: input_data["pi"] = None
 
     return input_data
 
@@ -171,7 +170,8 @@ if __name__ == "__main__":
         data["email"] = new_user_data["email"]
         note_dict = newUser.notes
         note_dict["phone"] = new_user_data["phone"]
-        #note_dict["project"] = args.project
+        if new_user_data["pi"] != None:
+            note_dict["pi"] = new_user_data["pi"]
         data["notes"] = json.dumps(note_dict)
         data["password"] = EUtils.GenPassword(28)
         newUser.SetUserData(data)

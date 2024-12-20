@@ -17,6 +17,7 @@
 
 from EmPyreAI.EmpireUser import EmpireUser
 from EmPyreAI.EmpireGroup import EmpireGroup
+from EmPyreAI.EmpireSlurm import EmpireSlurm
 import EmPyreAI.EmpireUtils as EUtils
 import os
 import getpass
@@ -30,45 +31,14 @@ import shlex
 created_dirs = []
 
 if __name__ == "__main__":
+    slurmAPI = EmpireSlurm()
+
     for institution in ['cuny', 'suny', 'columbia', 'cornell', 'rpi', 'nyu']:
         thisGroup = EmpireGroup(institution)
         for groupMember in thisGroup.members:
-            print(f"Checking for Lustre directory for user {groupMember}.")
-            try:
-                hostname = "alpha1"
-                username = "root"
-                key = "/root/.ssh/id_ecdsa"
-                ssh = paramiko.SSHClient()
-                ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                ssh.connect(hostname, username=username, key_filename=key)
-                directory = f"/mnt/lustre/{institution}/{groupMember}"
-
-                command = f"if [ -d '{directory}' ]; then echo 'exists'; else echo 'create'; fi"
-                stdin, stdout, stderr = ssh.exec_command(command)
-                result = stdout.read().decode().strip()
-
-                if result == "create":
-                    print(f"Creating directory {directory}...")
-                    mkdirCmd = f"mkdir {directory}"
-                    chownCmd = f"chown {groupMember}:{institution} {directory}"
-                    ssh.exec_command(mkdirCmd)
-                    ssh.exec_command(chownCmd)
-                    created_dirs.append(groupMember)
-                
-                ssh.close()
-            except Exception as e:
-                print(f"Exception occurred while verifying/creating /mnt/lustre directory for user {groupMember}.")
-                print(e)
-
-            # Create the slurm user if missing
-            print(f"Attempting to create a slurm account for {groupMember}.")
-            environ = os.environ.copy()
-            environ["SLURM_CONF"] = "/cm/shared/apps/slurm/var/etc/slurm/slurm.conf"
-            cmd = f"/cm/shared/apps/slurm/current/bin/sacctmgr -i create user name={groupMember} cluster=slurm account={institution} qos=normal,{institution} defaultqos={institution}"
-            result =  subprocess.run(shlex.split(cmd), capture_output=True, text=True)
-            if result.returncode == 0:
-                print(f"Created a Slurm user for {groupMember} in the {institution} account.")
-
-    for dir in created_dirs:
-        print(f"Created {dir}")
+            thisUser = EmpireUser(groupMember)
+            userAccounts = slurmAPI.GetUserAccounts(thisUser.username)
+            print(userAccounts["accounts"])
+            if thisGroup.name not in userAccounts["accounts"]:
+                print(f"User {thisUser.username} needs to be added to the {thisGroup.name} account in Slurm")
 

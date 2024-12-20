@@ -48,6 +48,7 @@ def GatherData():
     data["phone"] = input("Enter the users phone number: ")
     data["institution"] = input("Enter the users institution: ")
     data["username"] = input("Enter the desired username: ")
+    data["pi"] = input("Enter the users PI if applicable: ")
 
     if data["institution"] not in ['cuny', 'suny', 'columbia', 'cornell', 'rpi', 'nyu']:
         print("[\033[31m ERROR\033[0m ] The specified institution is invalid. It must be one of ['cuny', 'suny', 'columbia', 'cornell', 'rpi', 'nyu'].")

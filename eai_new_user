@@ -38,21 +38,48 @@ import jinja2
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+import re
+
+def getInput(prompt, required=True, validAnswers=None):
+    if required:
+        while True:
+            value = input(prompt).strip()
+            if value:
+                if validAnswers != None and value in validAnswers:
+                    return value
+                else:
+                    print("You must enter one of the following: " + validAnswers)
+            else:
+                print("An answer to this question is required.")
+    else:
+        value = input(prompt).strip()
+        if value != None and len(value) == 0:
+            return None
+        return value
+
+def formatPhone(value):
+    digits = re.sub(r"[^\d]", "", value)
+
+    if len(digits) == 10:
+        return f"{digits[:3]}-{digits[3:6]}-{digits[6:]}"
+    else:
+        print(f"The supplied phone number of {value} cannot be parsed. This is non-fatal.")
+        return value
 
 def GatherData():
     data = {}
     # Prompt the user for all the required information
-    data["firstname"] = input("Enter the users first name: ")
-    data["lastname"] = input("Enter the users last name: ")
-    data["email"] = input("Enter the users email address: ")
-    data["phone"] = input("Enter the users phone number: ")
-    data["institution"] = input("Enter the users institution: ")
-    data["username"] = input("Enter the desired username: ")
-    data["pi"] = input("Enter the users PI if applicable: ")
+    data["firstname"] = getInput("Enter the users first name: ")
+    data["lastname"] = getInput("Enter the users last name: ")
+    data["email"] = getInput("Enter the users email address: ")
+    data["phone"] = formatPhone(getInput("Enter the users phone number: "))
+    data["institution"] = getInput("Enter the users institution: ", validAnswers=['cuny', 'suny', 'columbia', 'cornell', 'rpi', 'nyu'])
+    data["username"] = getInput("Enter the desired username: ")
+    data["pi"] = getInput("Enter the users PI if applicable: ", required=False)
 
-    if data["institution"] not in ['cuny', 'suny', 'columbia', 'cornell', 'rpi', 'nyu']:
-        print("[\033[31m ERROR\033[0m ] The specified institution is invalid. It must be one of ['cuny', 'suny', 'columbia', 'cornell', 'rpi', 'nyu'].")
-        sys.exit(100)
+    #if data["institution"] not in ['cuny', 'suny', 'columbia', 'cornell', 'rpi', 'nyu']:
+    #    print("[\033[31m ERROR\033[0m ] The specified institution is invalid. It must be one of ['cuny', 'suny', 'columbia', 'cornell', 'rpi', 'nyu'].")
+    #    sys.exit(100)
 
     return data
 

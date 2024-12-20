@@ -45,10 +45,13 @@ def getInput(prompt, required=True, validAnswers=None):
         while True:
             value = input(prompt).strip()
             if value:
-                if validAnswers != None and value in validAnswers:
-                    return value
+                if validAnswers != None
+                    if value in validAnswers:
+                        return value
+                    else:
+                        print("You must enter one of the following: " + validAnswers)
                 else:
-                    print("You must enter one of the following: " + validAnswers)
+                    return value
             else:
                 print("An answer to this question is required.")
     else:

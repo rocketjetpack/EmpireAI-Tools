@@ -1,0 +1,81 @@
+#!/usr/bin/env python3
+
+# This utility will attempt to find an EmpireAI user by their phone number
+#
+# Arguments:
+#   -p|--phone
+#
+# This makes use of the EmpyreAI module and ultimately the Base Command API
+#   to provide user management capabilities to coordinators without requiring
+#   elevated privileges on the cluster.
+#
+# Return Codes:
+#   0 = Success
+#   1 = Unknown Error
+#   100 = Missing argument
+#
+# Author: Kali McLennan (Flatiron Institute) - kmclennan@flatironinstitute.org
+
+import EmPyreAI.EmpireAPI
+from EmPyreAI.EmpireUser import EmpireUser
+import EmPyreAI.EmpireUtils as EUtils
+import os
+import argparse as ap
+import stat
+import sys
+
+def ParseArgs():
+    parser = ap.ArgumentParser()
+    parser.add_argument("-d", "--dry-run", help="Enable dry-run mode. No changes will be made.", action="store_true")
+    args = parser.parse_args()
+
+    return args
+
+def TooPermissive(dir):
+    try:
+        current_permissions = stat.S_IMODE(os.lstat(dir).st_mode)
+        if current_permissions & 0o077:
+            return True
+        else:
+            return False
+    except FileNotFoundError:
+        print(f"Directory {dir} does not exist.")
+        return True
+    except PermissionError:
+        print(f"Permission denied checking the permissions of {dir}")
+        return True
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return True
+
+def Set700(dir, dry_run = False):
+    if dry_run == True:
+        print(f"Should change permissions on {dir} but dry run is active!")
+        return True
+    else:
+        try:
+            os.chmod(dir, 0o700)
+            print(f"Updated permissions on {dir}.")
+        except Exception as e:
+            print(f"An error occurred changing permissions on {dir}. {e}")
+
+if __name__ == "__main__":
+    if not (EUtils.CheckAPI()):
+        print("At least one API access key or certificate file is not present. You will not be able to interact with the Base Command API without these files.")
+        sys.exit(1)
+
+    args = ParseArgs()
+
+    all_user_data = EmPyreAI.EmpireAPI.CMSH_Cluster.get_by_type('User')
+    print(f"Loaded info for {len(all_user_data)} users.")
+
+    for entry in all_user_data:
+        if entry['name'] in [ 'cmsupport', 'kmclennan', 'software', 'root']:
+            # A couple of exceptions for reasons
+            continue
+
+        # Extract the home directory location from the Base Command User object
+        thisHomeDir = entry['homeDirectory']
+        # Check the permissions
+        if (TooPermissive(thisHomeDir)):
+            Set700(thisHomeDir, args.dry_run)

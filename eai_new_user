@@ -221,6 +221,8 @@ def BatchMode(input_file, input_type="yaml"):
             if "phone" not in entry.keys():
                 print(f"The phone key is not set in the input data for username {entry['username']}. Skipping this entry.")
                 continue
+            if "pi" in entry.keys() and "is_pi" in entry.keys() and entry["is_pi"] == True:
+                print(f"The entry for username {entry['username']} contains both 'pi' and 'is_pi' keys. This is not a valid combo.")
 
             # Step 3: Check if the specified username already exists
             if EmpireUser.Exists(entry["username"]):
@@ -241,11 +243,15 @@ def BatchMode(input_file, input_type="yaml"):
             note_dict["phone"] = entry["phone"]
             if "pi" in entry.keys():
                 note_dict["pi"] = entry["pi"]
+            elif "is_pi" in entry.keys() and entry["is_pi"] == True:
+                note_dict["is_pi"] = True
+            if "project" in entry.keys():
+                note_dict["project"] = entry["project"]
             user_data["notes"] = json.dumps(note_dict)
             user_data["password"] = EUtils.GenPassword(28)
             new_user.SetUserData(user_data)
             new_user.AddToGroup(entry["institution"], force=True)
-            SendWelcomeMail(new_user.firstname, new_user.lastname, entry["institution"], new_user.email)
+            SendWelcomeMail(new_user.firstname, new_user.username, entry["institution"], new_user.email)
             print(f"Created a new user named {new_user.username}.")
         except Exception as e:
             print(f"An exception occurred while creating a new user named {entry['username']}. Attempting to continue.")

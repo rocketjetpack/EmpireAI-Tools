@@ -27,8 +27,54 @@ import json
 import paramiko
 import subprocess
 import shlex
+import time
 
 created_dirs = []
+
+def CreateSlurmEntry(username, institution):
+    try:
+        environ = os.environ.copy()
+        environ["SLURM_CONF"] = "/cm/shared/apps/slurm/var/etc/slurm/slurm.conf"
+        cmd = f"/cm/shared/apps/slurm/current/bin/sacctmgr -i create user name={username} cluster=slurm account={institution} qos=normal,{institution}"
+        result = subprocess.run(shlex.split(cmd), capture_output=True, text=True)
+        if result.returncode == 0:
+            table = PrettyTable()
+            table.field_names = ["Username", "Account"]
+            table.add_row([username, institution])
+            print(table)
+    except Exception as e:
+        print(f"Exception occurred while creating a Slurm user for {username} in the {institution} account.")
+        print(e)
+
+def HandleLustreDirectory(username, institution):
+    try:
+        hostname = "alpha1"
+        sshuser = "root"
+        key = "/root/.ssh/id_ecdsa"
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(hostname, username=sshuser, key_filename=key)
+        directory = f"/mnt/lustre/{institution}/{username}"
+        print(f"Checking {directory}")
+
+        command = f"if [ -d '{directory}' ]; then echo 'exists'; else echo 'create'; fi"
+        stdin, stdout, stderr = ssh.exec_command(command)
+        result = stdout.read().decode().strip()
+
+        if result == "create":
+            mkdirCmd = f"mkdir {directory}"
+            chownCmd = f"chown {username}:{username} {directory}"
+            ssh.exec_command(mkdirCmd)
+            ssh.exec_command(chownCmd)
+        ssh.close()
+        table = PrettyTable()
+        table.field_names = ["Username", "Lustre Dir"]
+        table.add_row([username, directory])
+        #print(table)
+    except Exception as e:
+        print(f"Exception occurred while verifying/creating /mnt/lustre/{institution}/{username} on alpha1.")
+        print(e)
+
 
 if __name__ == "__main__":
     slurmAPI = EmpireSlurm()
@@ -38,7 +84,10 @@ if __name__ == "__main__":
         for groupMember in thisGroup.members:
             thisUser = EmpireUser(groupMember)
             userAccounts = slurmAPI.GetUserAccounts(thisUser.username)
-            print(userAccounts["accounts"])
-            if thisGroup.name not in userAccounts["accounts"]:
-                print(f"User {thisUser.username} needs to be added to the {thisGroup.name} account in Slurm")
+
+            if userAccounts == None or thisGroup.name not in userAccounts["accounts"]:
+                print(f"User {thisUser.username} does not have an entry in account {institution} in Slurm. Need to create them.")
+                CreateSlurmEntry(thisUser.username, institution)
+            print(f"Handling lustre dir for {thisUser.username}")
+            HandleLustreDirectory(thisUser.username, institution)
 

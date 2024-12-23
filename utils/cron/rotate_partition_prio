@@ -23,6 +23,7 @@ import subprocess
 import shlex
 import re
 from datetime import datetime
+import argparse as ap
 
 # CUNY, NYU, RPI, and SUNY are acronyms, which explains why cuny preceeds columbia in this list
 order = ['cuny', 'columbia', 'cornell', 'nyu', 'rpi', 'suny']
@@ -33,7 +34,7 @@ def GetPartitionText():
     environ = os.environ.copy()
     environ["SLURM_CONF"] = "/cm/shared/apps/slurm/var/etc/slurm/slurm.conf"
     cmd = f"/cm/shared/apps/slurm/current/bin/scontrol show partition"
-    result =  subprocess.run(shlex.split(cmd), capture_output=True, text=True)
+    result =  subprocess.run(shlex.split(cmd), capture_output=True, text=True, env=environ)
     if result.returncode == 0:
         return result.stdout
     else:
@@ -51,18 +52,31 @@ def ParsePartition(details):
     except:
         return None
 
-def SetPartitionPriorityTier(partition_name, value):
+def SetPartitionPriorityTier(partition_name, value, dry_run=False):
     # construct the command
     environ = os.environ.copy()
     environ["SLURM_CONF"] = "/cm/shared/apps/slurm/var/etc/slurm/slurm.conf"
     cmd = f"/cm/shared/apps/slurm/current/bin/scontrol update PartitionName={partition_name} PriorityTier={value}"
-    result = subprocess.run(shlex.split(cmd), capture_output=True, text=True)
+
+    if dry_run == True:
+        print("NOTICE: Dry-run is active! No changes will be made to partition priority tiers. The command that would normally run is:")
+        print(cmd)
+        return True
+
+    result = subprocess.run(shlex.split(cmd), capture_output=True, text=True, env=environ)
     if result.returncode == 0:
         return True
     else:
         return False
     
+def ParseArgs():
+    parser = ap.ArgumentParser()
+    parser.add_argument("-d", "--dry-run", help="Simulate a normal run but make no changes to priorities.", action="store_true")
+    args = parser.parse_args()
+    return args
+
 if __name__ == "__main__":
+    args = ParseArgs()
     print("Weekly partition priority rotation has been initiated at " + datetime.now().strftime("%Y-%m-%d %H:%M:%S" + "."))
 
     # Get the text output from scontrol show part

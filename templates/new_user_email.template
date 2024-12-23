@@ -1,0 +1,27 @@
+<html>
+<body>
+<p>Empire AI User Creation Notice</p>
+<p>&nbsp;</p>
+<p>Hello {{firstname}},</p>
+<p>We are excited to welcome you to the Empire AI Alpha system!</p>
+<p>&nbsp;</p>
+<p>The Alpha system is a collection of 12 HGX servers, along with two login nodes and two Globus data transfer nodes. Each of the HGX servers has 8x Nvidia H100 80GB SXM5 GPU cards in a full-mesh NVLink configuration. These servers have 2x 48-core processors and 2TB of system memory.</p>
+<p>&nbsp;</p>
+<p><strong>Account Information</strong></p>
+<p>Your username is {{username}}</p>
+<p>The home filesystem is a Vast appliance and is available at /mnt/home/{{username}}</p>
+<p>The scratch filesystem is a Lustre appliance and is available at /mnt/lustre/{{institution}}/{{username}}</p>
+<p>&nbsp;</p>
+<p>It may take up to one hour before you are able to submit jobs to Slurm or access the scratch filesystem.</p>
+<p>&nbsp;</p>
+<p><strong>To receive your initial password, please send an SMS text message to 917-853-8040 from the phone number you provided during registration.&nbsp;</strong></p>
+<p>&nbsp;</p>
+<p><strong>Accessing Alpha</strong></p>
+<p>Once you have your password, you can SSH to Alpha using: ssh {{username}}@alpha.empire-ai.org.</p>
+<p>&nbsp;</p>
+<p>If you need assistance with anything, please open a service ticket by emailing <a href="mailto:help@empire-ai.org"><span class="qu go" translate="no" role="gridcell" tabindex="-1">help@empire-ai.org</span></a><span class="qu go" translate="no" role="gridcell" tabindex="-1" aria-hidden="true"></span></p>
+<p>&nbsp;</p>
+<p>Thank you,</p>
+<p>The Empire AI Alpha Team</p>
+</body
+</html>

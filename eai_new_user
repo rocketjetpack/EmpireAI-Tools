@@ -159,7 +159,7 @@ def ParseArgs():
 
 def SendWelcomeMail(firstname, username, institution, email):
     environment = jinja2.Environment(loader=jinja2.FileSystemLoader("/opt/EmpireAI-Tools/templates"))
-    template = environment.get_template("new_user.j2")
+    template = environment.get_template("new_user_email.template")
     content = template.render(firstname=firstname, username=username, institution=institution)
     smtp_server = "alpha-mgr"
     smtp_port = 25

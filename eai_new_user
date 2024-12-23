@@ -100,12 +100,16 @@ def ParseArgs():
     parser.add_argument("-i", "--institution", type=str, help="The users instituion", action="store")
     parser.add_argument("-I", "--interactive", help="Run interactively", action="store_true")
     parser.add_argument("-x", "--no-slurm", help="Skip adding the new user to Slurm.", action="store_true")
+    parser.add_argument("-B", "--batch", help="Run in batch mode with the specified file as input.", action="store") #Implementation coming
     args = parser.parse_args()
 
     input_data = {}
 
     if args.interactive == True:
         input_data = GatherData()
+    elif args.batch != None:
+        print("[\033[31m ERROR\033[0m ] Batch mode is still being implemented.")
+        sys.exit(1)
     else:
         if args.username == None:
             print("[\033[31m ERROR\033[0m ] The username is a required flag. Please use [-u|--username] to provide this information.")
@@ -152,7 +156,7 @@ def ParseArgs():
     return input_data
 
 def SendWelcomeMail(firstname, username, institution, email):
-    environment = jinja2.Environment(loader=jinja2.FileSystemLoader("/usr/share/empireai/templates"))
+    environment = jinja2.Environment(loader=jinja2.FileSystemLoader("/opt/EmpireAI-Tools/templates"))
     template = environment.get_template("new_user.j2")
     content = template.render(firstname=firstname, username=username, institution=institution)
     smtp_server = "alpha-mgr"

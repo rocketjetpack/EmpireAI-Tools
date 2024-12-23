@@ -1,0 +1,6 @@
+# Run eai_rotate_partition_prio weekly on Sunday morning at 00:00:00
+0   0 * * 0 /opt/EmpireAI-Tools/utils/cron/eai_cron_rotate_prio >> /var/log/cron_partition_prio.log 
+
+# Run eai_cron_new_users every 30 minutes to ensure newly created users have
+# Lustre directories and Slurm accounts created.
+*/30 * * * * /opt/EmpireAI-Tools/utils/cron/eai_cron_new_users >> /var/log/cron_new_users.log

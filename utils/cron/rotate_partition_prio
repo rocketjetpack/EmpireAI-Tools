@@ -31,13 +31,18 @@ current_prio_partition = None
 next_prio_partition = None
 
 def GetPartitionText():
-    environ = os.environ.copy()
-    environ["SLURM_CONF"] = "/cm/shared/apps/slurm/var/etc/slurm/slurm.conf"
-    cmd = f"/cm/shared/apps/slurm/current/bin/scontrol show partition"
-    result =  subprocess.run(shlex.split(cmd), capture_output=True, text=True, env=environ)
-    if result.returncode == 0:
-        return result.stdout
-    else:
+    try:
+        environ = os.environ.copy()
+        environ["SLURM_CONF"] = "/cm/shared/apps/slurm/var/etc/slurm/slurm.conf"
+        cmd = f"/cm/shared/apps/slurm/current/bin/scontrol show partition"
+        result =  subprocess.run(shlex.split(cmd), capture_output=True, text=True, env=environ)
+        if result.returncode == 0:
+            return result.stdout
+        else:
+            return None
+    except Exception as e:
+        print("GetPartitionText(): An exception occurred attempting to fetch the output of 'scontrol show partition'")
+        print(e)
         return None
 
 def ParsePartition(details):
@@ -49,24 +54,30 @@ def ParsePartition(details):
             for key,value in items:
                 data[key] = value
         return data
-    except:
+    except Exception as e:
+        print("ParsePartition(): An exception occurred while attempting to parse information about a partition.")
+        print(e)
         return None
 
 def SetPartitionPriorityTier(partition_name, value, dry_run=False):
-    # construct the command
-    environ = os.environ.copy()
-    environ["SLURM_CONF"] = "/cm/shared/apps/slurm/var/etc/slurm/slurm.conf"
-    cmd = f"/cm/shared/apps/slurm/current/bin/scontrol update PartitionName={partition_name} PriorityTier={value}"
+    try:
+        environ = os.environ.copy()
+        environ["SLURM_CONF"] = "/cm/shared/apps/slurm/var/etc/slurm/slurm.conf"
+        cmd = f"/cm/shared/apps/slurm/current/bin/scontrol update PartitionName={partition_name} PriorityTier={value}"
 
-    if dry_run == True:
-        print("NOTICE: Dry-run is active! No changes will be made to partition priority tiers. The command that would normally run is:")
-        print(cmd)
-        return True
+        if dry_run == True:
+            print("NOTICE: Dry-run is active! No changes will be made to partition priority tiers. The command that would normally run is:")
+            print(cmd)
+            return True
 
-    result = subprocess.run(shlex.split(cmd), capture_output=True, text=True, env=environ)
-    if result.returncode == 0:
-        return True
-    else:
+        result = subprocess.run(shlex.split(cmd), capture_output=True, text=True, env=environ)
+        if result.returncode == 0:
+            return True
+        else:
+            return False
+    except Exception as e:
+        print(f"SetPartitionPriorityTier(): An exception occurred while attempting to modify the {partition_name} partition.")
+        print(e)
         return False
     
 def ParseArgs():

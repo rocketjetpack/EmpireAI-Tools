@@ -25,8 +25,7 @@ import re
 from datetime import datetime
 import argparse as ap
 
-# CUNY, NYU, RPI, and SUNY are acronyms, which explains why cuny preceeds columbia in this list
-order = ['cuny', 'columbia', 'cornell', 'nyu', 'rpi', 'suny']
+order = ['nyu', 'columbia', 'cornell', 'rpi', 'suny', 'cuny']
 current_prio_partition = None
 next_prio_partition = None
 

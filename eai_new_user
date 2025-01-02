@@ -273,28 +273,31 @@ if __name__ == "__main__":
         sys.exit(102)
 
     if not EmpireUser.Exists(new_user_data["username"]):
-        try:
+        newUser = EmpireUser(new_user_data["username"], load=False)
+        #EmpireUser.New(new_user_data["username"])
+        #try:
             # Create the new user, then fetch the user object for modification
-            EmpireUser.New(new_user_data["username"])
-        except Exception as e:
-            print(f"[\033[31m ERROR\033[0m ] Failed to create a new User object named " + new_user_data["username"] + " via the Base Command API.")
-            print(e)
-            sys.exit(1)
+            #EmpireUser.New(new_user_data["username"])
+        #except Exception as e:
+        #    print(f"[\033[31m ERROR\033[0m ] Failed to create a new User object named " + new_user_data["username"] + " via the Base Command API.")
+        #    print(e)
+        #    sys.exit(1)
         
         newUser = EmpireUser(new_user_data["username"])
 
         #Construct a dict of values to set for the new user
         data = {}
+        data["username"] = new_user_data["username"]
         data["commonName"] = new_user_data["firstname"]
         data["surname"] = new_user_data["lastname"]
         data["email"] = new_user_data["email"]
-        note_dict = newUser.notes
+        note_dict = {}
         note_dict["phone"] = new_user_data["phone"]
         if new_user_data["pi"] != None:
             note_dict["pi"] = new_user_data["pi"]
         data["notes"] = json.dumps(note_dict)
         data["password"] = EUtils.GenPassword(28)
-        newUser.SetUserData(data)
+        newUser.Add(data)
 
         print("[\033[32m SUCCESS\033[0m ] Created a new user with the following information:\n")
         table = PrettyTable()

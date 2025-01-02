@@ -1,27 +1,36 @@
-<html>
-<body>
-<p>Empire AI User Creation Notice</p>
-<p>&nbsp;</p>
-<p>Hello {{firstname}},</p>
+<div style=" background-color: #f2f2f2;">
+<p style="font-size: 200%; font-weight: bold;">Hello {{firstname}},</p>
 <p>We are excited to welcome you to the Empire AI Alpha system!</p>
-<p>&nbsp;</p>
+</div>
+<div>
+<p style="font-size: 150%; font-weight: bold;"><em>This message contains instructions for activating your new account and getting started. Please read it carefully.</em></p>
+</div>
+<div id="account_info">
+<p style="font-size: 150%; font-weight: bold;">Account Information</p>
+<p>Your username is <strong>{{username}}</strong></p>
+</div>
+<div id="password">
+<p><strong>To receive your initial password, please send an SMS text message to Kali McLennan at 917-853-8040 from the phone number you provided during registration.&nbsp;</strong></p>
+<p>Please include your username in the message.</p>
+</div>
+<div>
+<p style="font-size: 150%; font-weight: bold;">System Information</p>
+<strong>What is Alpha?</strong>
 <p>The Alpha system is a collection of 12 HGX servers, along with two login nodes and two Globus data transfer nodes. Each of the HGX servers has 8x Nvidia H100 80GB SXM5 GPU cards in a full-mesh NVLink configuration. These servers have 2x 48-core processors and 2TB of system memory.</p>
-<p>&nbsp;</p>
-<p><strong>Account Information</strong></p>
-<p>Your username is {{username}}</p>
-<p>The home filesystem is a Vast appliance and is available at /mnt/home/{{username}}</p>
-<p>The scratch filesystem is a Lustre appliance and is available at /mnt/lustre/{{institution}}/{{username}}</p>
-<p>&nbsp;</p>
-<p>It may take up to one hour before you are able to submit jobs to Slurm or access the scratch filesystem.</p>
-<p>&nbsp;</p>
-<p><strong>To receive your initial password, please send an SMS text message to 917-853-8040 from the phone number you provided during registration.&nbsp;</strong></p>
-<p>&nbsp;</p>
-<p><strong>Accessing Alpha</strong></p>
-<p>Once you have your password, you can SSH to Alpha using: ssh {{username}}@alpha.empire-ai.org.</p>
-<p>&nbsp;</p>
-<p>If you need assistance with anything, please open a service ticket by emailing <a href="mailto:help@empire-ai.org"><span class="qu go" translate="no" role="gridcell" tabindex="-1">help@empire-ai.org</span></a><span class="qu go" translate="no" role="gridcell" tabindex="-1" aria-hidden="true"></span></p>
-<p>&nbsp;</p>
-<p>Thank you,</p>
-<p>The Empire AI Alpha Team</p>
-</body
-</html>
+<strong>Alpha Filesystems</strong>
+<p>The home filesystem is a Vast appliance and is available at <strong>/mnt/home/{{username}}</strong><br /> The scratch filesystem is a Lustre appliance and is available at <strong>/mnt/lustre/{{institution}}/{{username}}</strong> <u><br />Note: It may take up to one hour before you are able to submit jobs to Slurm or access the scratch filesystem.</u></p>
+<strong>Accessing Alpha</strong>
+<p>Once you have received your password you can connect to Alpha via SSH using: <strong>ssh {{username}}@alpha.empire-ai.org</strong> on the standard SSH port (22).</p>
+<strong>Multi-Factor Authentication</strong>
+<p>After entering your username and password you will be prompted to configure multi-factor authentication (MFA) using the Google Authenticator. Have your smart phone handy with the Google Authenticator app installed to complete this step</p>
+<p style="font-style: italic;">You may opt to skip this step by responding with No to the prompt.</p>
+<p>Once enabled, you will be prompted for a "Verification Code" during each login. The "Verification Code" is the 6-digit number displayed in the Google Authenticator app.</p>
+<div>
+  <p style="font-size: 150%; font-weight: bold;">Need Help?</p>
+  Please visit the <a href="https://empireai.freshdesk.com/support/solutions">Empire AI Knowledge Base</a> to see if an answer to your question is already available.<br />
+  If you need assistance with anything, please open a service ticket by emailing <a href="mailto:help@empire-ai.org">help@empire-ai.org</a>
+</div>
+<div style="font-weight: bold; font-size: 150%;">
+<p>Thank you,<br />
+The Empire AI Alpha Team</p>
+</div>

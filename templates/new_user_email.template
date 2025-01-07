@@ -1,11 +1,11 @@
-<div style=" background-color: #f2f2f2;">
+<div>
 <p style="font-size: 200%; font-weight: bold;">Hello {{firstname}},</p>
 <p>We are excited to welcome you to the Empire AI Alpha system!</p>
 </div>
 <div>
 <p style="font-size: 150%; font-weight: bold;"><em>This message contains instructions for activating your new account and getting started. Please read it carefully.</em></p>
 </div>
-<div id="account_info">
+<div>
 <p style="font-size: 150%; font-weight: bold;">Account Information</p>
 <p>Your username is <strong>{{username}}</strong></p>
 </div>

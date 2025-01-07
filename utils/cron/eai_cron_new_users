@@ -78,16 +78,19 @@ def HandleLustreDirectory(username, institution):
 
 if __name__ == "__main__":
     slurmAPI = EmpireSlurm()
+    slurmAllUsers = slurmAPI.GetAllUsers()
+    print(slurmAllUsers)
+    sys.exit(0)
 
     for institution in ['cuny', 'suny', 'columbia', 'cornell', 'rpi', 'nyu']:
         thisGroup = EmpireGroup(institution)
         for groupMember in thisGroup.members:
             thisUser = EmpireUser(groupMember)
-            userAccounts = slurmAPI.GetUserAccounts(thisUser.username)
-
+            userAccounts = slurmAPI.GetUserAccounts(thisUser.Username)
+            print(userAccounts)
             if userAccounts == None or thisGroup.name not in userAccounts["accounts"]:
-                print(f"User {thisUser.username} does not have an entry in account {institution} in Slurm. Need to create them.")
-                CreateSlurmEntry(thisUser.username, institution)
-            print(f"Handling lustre dir for {thisUser.username}")
-            HandleLustreDirectory(thisUser.username, institution)
+                print(f"User {thisUser.Username} does not have an entry in account {institution} in Slurm. Need to create them.")
+                CreateSlurmEntry(thisUser.Username, institution)
+            print(f"Handling lustre dir for {thisUser.Username}")
+            HandleLustreDirectory(thisUser.Username, institution)
 

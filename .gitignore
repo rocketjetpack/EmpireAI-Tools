@@ -1,6 +1,10 @@
 # Test scripts should not be committed to this repository
 test_scripts/*
 
+# Do not commit parameter files for eai_cli
+params.yaml
+userparams.yaml
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

@@ -1,0 +1,208 @@
+#!/usr/bin/env python
+
+
+from rich import print
+from typer import Context
+from typer import Argument, Option
+from typing_extensions import Annotated
+from typing import Optional
+import os
+import getpass
+from EmPyreAI.EmpireUser import EmpireUser
+from EmPyreAI.EmpireGroup import EmpireGroup
+import EmPyreAI.EmpireUtils as EUtils
+import re
+from prettytable import PrettyTable
+from datetime import datetime
+from typer_shell import make_typer_shell, _update, save, get_params
+import json
+import sys
+
+class App:
+    def __init__(self):
+        pass
+
+class UserApp:
+    def __init__(self):
+        self.SelectedUser = None
+
+def on_finished(_):
+    print('Done! And here is your goodbye message.')
+
+def UserAppExitCallback(_):
+    EUtils.Notice("Exiting user management mode.")
+
+app = make_typer_shell(prompt="Empire CLI: ", on_finished=on_finished, obj=App(), params={"username": getpass.getuser()}, params_path="params.yaml")
+user_app = make_typer_shell(prompt="Empire CLI (User): ", on_finished=UserAppExitCallback, obj=UserApp(), params={"username": getpass.getuser()}, params_path="innerparams.yaml", intro="Welcome to user management mode.")
+app.add_typer(user_app, name="user")
+
+@user_app.command()
+def add(ctx: Context,username: Annotated[str, Option(help="The username for the new account.", rich_help_panel="Required Arguments", prompt=True)],
+        firstname: Annotated[str, Option(help="The firstname of the account holder.", rich_help_panel="Required Arguments", prompt=True)],
+        lastname: Annotated[str, Option(help="The last name of the account holder.", rich_help_panel="Required Arguments", prompt=True)],
+        email: Annotated[str, Option(help="The email address of the account holder.", rich_help_panel="Required Arguments", prompt=True)],
+        phone: Annotated[str, Option(help="The phone number of the account holder.", rich_help_panel="Required Arguments", prompt=True)],
+        institution: Annotated[str, Option(help="The username for the new account.", rich_help_panel="Required Arguments", prompt=True)],
+        pi: Annotated[bool, Option(help="The institution for the account. Must be one of ['cuny', 'suny', 'columbia', 'cornell', 'rpi', 'nyu'].", rich_help_panel="Optional Arguments" )] = False,
+        lab: Annotated[str, Option(help="Assign this user to a lab or existing Principal Investigator.", rich_help_panel="Optional Arguments" )] = None,
+        send_welcome: Annotated[bool, Option(help="Send a welcome email to the user when completed.", rich_help_panel="Optional Arguments" )] = True,
+        coordinator: Annotated[bool, Option(help="Assign this user to the coordinator group as a technical coordinator for an institution.", rich_help_panel="Optional Arguments")] = False,
+        ):
+    _update(key="SelectedUser", value=username, dict=ctx.obj.params_groups[ctx.parent.command.name]['params'])
+
+    # Do some sanity checks on the input values!
+    if len(username) < EUtils.MinimumUsernameLength:
+        # Do not allow usernames shorter than the minimum defined in the EmpireUser class
+        EUtils.Error(f"The provided username of {username} is shorter than the minimum allowed username length ({EUtils.MinimumUsernameLength}).")
+        return False
+    
+    # Validate the supplied email address
+    email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    if not re.match(email_regex, email):
+        EUtils.Error(f"The provided email address of {email} does not appear to be valid.")
+        return False
+    
+    # Validate the supplied institution to make sure it is valid
+    if institution not in ['cuny', 'suny', 'columbia', 'cornell', 'rpi', 'nyu']:
+        EUtils.Error(f"The specified institution ({institution}) is not a valid choice. It must be one of ['cuny', 'suny', 'columbia', 'cornell', 'rpi', 'nyu'].")
+        return False
+    
+    # Attempt to validate the phone number. This check is non-fatal but should produce a warning if the phone number cannot be parsed as a US phone
+    format_result, formatted_phone = EUtils.FormatPhoneNumber(phone)
+    if not format_result:
+        EUtils.Warning(f"The supplied phone number ({phone}) could not be parsed as a United States phone number.")
+    phone = formatted_phone
+
+    newUserSummary = PrettyTable(["Username", "Name", "Phone", "Email", "Institution", "Is PI"])
+    newUserSummary.add_row([username, f"{firstname} {lastname}", phone, email, institution, pi])
+    print(newUserSummary)
+    if EUtils.PromptConfirm("Create this user ([Y]|N)?") == False:
+        EUtils.Warning("User cancelled request.")
+        return False
+    
+    if EmpireUser.Exists(username):
+        EUtils.Error(f"The supplied username of {username} already exists in the system. Cancelling request.", fatal = False)
+        return False
+
+    newUser = EmpireUser(username)
+    newUser.FirstName = firstname
+    newUser.LastName = lastname
+    newUser.Phone = phone
+    newUser.Email = email
+    newUser.Institution = institution
+    newUser.RandomizePassword(28)
+    newUser.Commit()
+
+    institutionGroup = EmpireGroup(institution)
+    institutionGroup.AddMember(username)
+
+    if coordinator == True:
+        coordinatorGroup = EmpireGroup("coordinator")
+        coordinatorGroup.AddMember(username)
+
+    newUser.SendWelcomeEmail()
+
+@user_app.command()
+def pwreset(ctx: Context, length: int = 14):
+    params = get_params(ctx)
+    if 'SelectedUser' not in params.keys():
+        print("No user has been selected!")
+    else:
+        user = EmpireUser(params['SelectedUser'])
+        if EUtils.PromptConfirm(f"Do you want to reset the password for {user.Username}?"):
+            newPassword = user.RandomizePassword(length)
+            user.Commit(force=True)
+            table = PrettyTable(['Username', 'New Password'])
+            table.add_row([user.Username, newPassword])
+            print(table)
+        else:
+            EUtils.Warning("User cancelled the request.")
+
+@user_app.command()
+def set(ctx: Context, key: str, value: str):
+    params = get_params(ctx)
+    if 'SelectedUser' not in params.keys():
+        print("No user has been selected!")
+    else:
+        user = EmpireUser(params['SelectedUser'])
+        validFields = ['firstname', 'lastname', 'email', 'phone', 'institution', 'shell']
+        if key.lower() not in validFields:
+            EUtils.Error(f"The set command cannot be used for the key {key}.")
+            return False
+    
+        if key.lower() == 'firstname': key = "FirstName"
+        if key.lower() == 'lastname': key = "LastName"
+        if key.lower() == 'email': key = "Email"
+        if key.lower() == 'phone': key = "Phone"
+        if key.lower() == 'institution': key = "Institution"
+        if key.lower() == 'shell': key = "Shell"
+        setattr(user, key, value)
+        user.Commit()
+
+@user_app.command()
+def show(ctx: Context, long: bool = False): 
+    params = get_params(ctx)
+    if 'SelectedUser' not in params.keys():
+        print("No user has been selected!")
+    else:
+        if EmpireUser.Exists(params['SelectedUser']):
+            user = EmpireUser(params['SelectedUser'])
+            if long:
+                table = PrettyTable()
+                table.add_column("Key", ['Username', 'UID', 'Name', 'Home Dir', 'Shell', 'Email', 'Phone', 'Institution', 'Last Mod', 'Last Mod By', 'Created', 'Created By'])
+                table.add_column("Value", [user.Username, user.ID, user.FullName, user.HomeDirectory, user.Shell, user.Email, user.Phone, user.Institution, user.LastModified["date"], user.LastModified["by"], user.Creation["date"], user.Creation["by"]])
+            else:
+                table = PrettyTable(['Username', 'Full Name', 'HomeDir', 'LastMod', 'LastModBy'])
+                table.add_row([user.Username, f"{user.FirstName} {user.LastName}", user.UserData['homeDirectory'], user.LastModified["date"], user.LastModified["by"]] )
+            print(table)
+        else:
+            EUtils.Error(f"The selected username {params['SelectedUser']} does not exist in the system.", fatal = False)
+
+@user_app.command()
+def resend_welcome(ctx: Context):
+    params = get_params(ctx)
+    if 'SelectedUser' not in params.keys():
+        print("No user has been selected!")
+    else:
+        if EmpireUser.Exists(params['SelectedUser']):
+            user = EmpireUser(params['SelectedUser'])
+            if EUtils.PromptConfirm(f"Resend the welcome email to {user.Email}?"):
+                user.SendWelcomeEmail()
+            else:
+                EUtils.Warning("User cancelled the request.")
+
+@user_app.command()
+def select(ctx: Context, username: str):
+    if EmpireUser.Exists(username):
+        _update(key="SelectedUser", value=username, dict=ctx.obj.params_groups[ctx.parent.command.name]['params'])
+    else:
+        if "SelectedUser" in ctx.obj.params_groups[ctx.parent.command.name]['params']:
+            ctx.obj.params_groups[ctx.parent.command.name]['params'].pop("SelectedUser")
+        EUtils.Error(f"There is no user named {username} in the system.")
+    
+
+@app.command()
+def name(ctx: Context, name: str = "Bob"):
+    "Name command"
+    print("Hello", name)
+    print(ctx)
+
+def CheckAccess():
+    import grp, pwd
+    user = getpass.getuser()
+    groups = [g.gr_name for g in grp.getgrall() if user in g.gr_mem]
+    gid = pwd.getpwnam(user).pw_gid
+    groups.append(grp.getgrgid(gid).gr_name)
+    if "coordinator" in groups:
+        return True
+    else: 
+        return False
+
+if __name__ == "__main__":
+    # Check if this user is a member of the coordinator group
+    # Only coordinator members can run this utility
+    if CheckAccess() == False:
+        EUtils.Error("You are not authorized to interact with this tool.")
+        sys.exit(1)
+
+    app()

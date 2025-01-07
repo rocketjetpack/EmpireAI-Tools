@@ -71,26 +71,39 @@ def HandleLustreDirectory(username, institution):
         table.field_names = ["Username", "Lustre Dir"]
         table.add_row([username, directory])
         #print(table)
+        return True
     except Exception as e:
         print(f"Exception occurred while verifying/creating /mnt/lustre/{institution}/{username} on alpha1.")
         print(e)
+        return False
 
 
 if __name__ == "__main__":
+    verbose = True
     slurmAPI = EmpireSlurm()
     slurmAllUsers = slurmAPI.GetAllUsers()
-    print(slurmAllUsers)
-    sys.exit(0)
 
     for institution in ['cuny', 'suny', 'columbia', 'cornell', 'rpi', 'nyu']:
         thisGroup = EmpireGroup(institution)
         for groupMember in thisGroup.members:
             thisUser = EmpireUser(groupMember)
+            userNotes = thisUser.Notes
+            
+            if "Lustre" not in userNotes.keys() or userNotes["Lustre"] != "Created":
+                print(f"Need to check Lustre directory for {thisUser.Username}...")
+                if HandleLustreDirectory(thisUser.Username, institution) == True:
+                    # Record that we have already handled this user and skip them in subsequent runs
+                    thisUser.SetNote("Lustre", "Created")
+                    thisUser.Commit()
+
             userAccounts = slurmAPI.GetUserAccounts(thisUser.Username)
-            print(userAccounts)
+            if verbose == True:
+                print(f"Slurm should allow user {thisUser.Username} to run in the following partitions: [{userAccounts['accounts']}].")
+            
             if userAccounts == None or thisGroup.name not in userAccounts["accounts"]:
                 print(f"User {thisUser.Username} does not have an entry in account {institution} in Slurm. Need to create them.")
                 CreateSlurmEntry(thisUser.Username, institution)
-            print(f"Handling lustre dir for {thisUser.Username}")
-            HandleLustreDirectory(thisUser.Username, institution)
+
+
+            
 

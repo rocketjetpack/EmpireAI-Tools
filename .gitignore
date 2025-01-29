@@ -2,8 +2,7 @@
 test_scripts/*
 
 # Do not commit parameter files for eai_cli
-params.yaml
-userparams.yaml
+*params*.yaml
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

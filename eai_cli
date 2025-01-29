@@ -128,9 +128,8 @@ def pwreset(ctx: Context, length: int = 14):
             table.add_row([user.Username, newPassword])
             print(table)
             EUtils.Notice("Creating dotfile to force the user to change their password on next login...")
-            command = f'/opt/EmpireAI-Tools/utils/sudo_force_pw_change.sh {user.Username}'
-            sudo_cmd = subprocess.Popen(['sudo'] + command, stdout=subprocess.PIPE)
-            print("running sudo command")
+            command = ['sudo', '/opt/EmpireAI-Tools/utils/sudo_force_pw_change.sh', user.Username]
+            sudo_cmd = subprocess.run(command)
             if sudo_cmd.returncode != 0:
                 EUtils.Error(f"There was some issue creating the dotfile to force {user.Username} to change their password on next login.")
         else:

@@ -16,7 +16,8 @@
 <div>
 <p style="font-size: 150%; font-weight: bold;">System Information</p>
 <strong>What is Alpha?</strong>
-<p>The Alpha system is a collection of 12 HGX servers, along with two login nodes and two Globus data transfer nodes. Each of the HGX servers has 8x Nvidia H100 80GB SXM5 GPU cards in a full-mesh NVLink configuration. These servers have 2x 48-core processors and 2TB of system memory.</p>
+<p>The Alpha system is a collection of 13 HGX servers, along with two login nodes and two Globus data transfer nodes. Each of the HGX servers has 8x Nvidia H100 80GB SXM5 GPU cards in a full-mesh NVLink configuration. These servers have 2x 48-core processors and 2TB of system memory.</p>
+<p>For more information see the <a href="https://empireai.freshdesk.com/a/solutions/articles/157000007946">Alpha Hardware</a> page on the knowledge base.</p>
 <strong>Alpha Filesystems</strong>
 <p>The home filesystem is a Vast appliance and is available at <strong>/mnt/home/{{username}}</strong><br /> The scratch filesystem is a Lustre appliance and is available at <strong>/mnt/lustre/{{institution}}/{{username}}</strong> <u><br />Note: It may take up to one hour before you are able to submit jobs to Slurm or access the scratch filesystem.</u></p>
 <strong>Accessing Alpha</strong>

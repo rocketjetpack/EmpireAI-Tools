@@ -11,6 +11,8 @@ import getpass
 from EmPyreAI.EmpireUser import EmpireUser
 from EmPyreAI.EmpireGroup import EmpireGroup
 import EmPyreAI.EmpireUtils as EUtils
+from EmPyreAI.EmpireProject import EmpireProject
+from EmPyreAI.EmpireProject import EmpireProjectList
 import re
 from prettytable import PrettyTable
 from datetime import datetime
@@ -26,15 +28,24 @@ class UserApp:
     def __init__(self):
         self.SelectedUser = None
 
+class ProjectApp:
+    def __init(self):
+        pass
+
 def on_finished(_):
-    print('Done! And here is your goodbye message.')
+    EUtils.Notice("Goodbye.")
 
 def UserAppExitCallback(_):
     EUtils.Notice("Exiting user management mode.")
 
+def ProjectAppExitCallback(_):
+    EUtils.Notice("Exiting project management mode.")
+
 app = make_typer_shell(prompt="Empire CLI: ", on_finished=on_finished, obj=App(), params={"username": getpass.getuser()}, params_path="params.yaml")
 user_app = make_typer_shell(prompt="Empire CLI (User): ", on_finished=UserAppExitCallback, obj=UserApp(), params={"username": getpass.getuser()}, params_path="innerparams.yaml", intro="Welcome to user management mode.")
+project_app = make_typer_shell(prompt="Empire CLI (Project): ", on_finished=ProjectAppExitCallback, obj=ProjectApp(), params={"username": getpass.getuser()}, params_path="project_params.yaml", intro="Welcome to project management mode.")
 app.add_typer(user_app, name="user")
+app.add_typer(project_app, name="project")
 
 @user_app.command()
 def add(ctx: Context,username: Annotated[str, Option(help="The username for the new account.", rich_help_panel="Required Arguments", prompt=True)],
@@ -162,7 +173,7 @@ def show(ctx: Context, long: bool = False):
 def resend_welcome(ctx: Context):
     params = get_params(ctx)
     if 'SelectedUser' not in params.keys():
-        print("No user has been selected!")
+        EUtils.Error("No user has been selected!")
     else:
         if EmpireUser.Exists(params['SelectedUser']):
             user = EmpireUser(params['SelectedUser'])
@@ -179,7 +190,65 @@ def select(ctx: Context, username: str):
         if "SelectedUser" in ctx.obj.params_groups[ctx.parent.command.name]['params']:
             ctx.obj.params_groups[ctx.parent.command.name]['params'].pop("SelectedUser")
         EUtils.Error(f"There is no user named {username} in the system.")
+
+@project_app.command()
+def list(ctx: Context):
+    projectList = EmpireProjectList()
+    table = PrettyTable([ "PI", "Title", "Institution"])
+    for thisProject in projectList.Projects:
+        table.add_row([thisProject.PI, thisProject.Title, thisProject.Institution])
+    print(table)
     
+@project_app.command()
+def select(ctx: Context, title: str):
+    projectList = EmpireProjectList()
+    if title in projectList.Titles:
+        _update(key="SelectedProject", value=title, dict=ctx.obj.params_groups[ctx.parent.command.name]['params'])
+        EUtils.Success(f"Selected project '{title}'")
+    else:
+        EUtils.Error(f"No project with the title of '{title}' exists.")
+
+@project_app.command()
+def show(ctx: Context): 
+    params = get_params(ctx)
+    if 'SelectedProject' not in params.keys():
+        EUtils.Error("No project has been selected!")
+    else:
+        projectList = EmpireProjectList()
+        table = PrettyTable()
+        table.add_column("Key", ['Title', 'PI', 'Institution', 'Department', 'Location'])
+        for project in projectList.Projects:
+            if project.Title == params["SelectedProject"]:        
+                table.add_column("Value", [project.Title, project.PI, project.Institution, project.Department, project.Location])
+                break
+        print(table)
+
+@project_app.command()
+def delete(ctx: Context):
+    params = get_params(ctx)
+    if 'SelectedProject' not in params.keys():
+        EUtils.Error("No project has been selected!")
+    else:
+        if EUtils.PromptConfirm(f"Delete the project named {params['SelectedProject']}?"):
+            projectList = EmpireProjectList()
+            for project in projectList.Projects:
+                if project.Title == params['SelectedProject']:
+                    projectList.Projects.remove(project)
+                    projectList.Save()
+        else:
+            EUtils.Notice("User cancelled the request.")
+
+@project_app.command()
+def add(ctx: Context,
+        title: Annotated[str, Option(help="The short title of the project.", rich_help_panel="Required Arguments", prompt=True)],
+        pi: Annotated[str, Option(help="The name of the projects principal investigator.", rich_help_panel="Required Arguments", prompt=True)],
+        institution: Annotated[str, Option(help="The institution for the account. Must be one of ['cuny', 'suny', 'columbia', 'cornell', 'rpi', 'nyu'].", rich_help_panel="Required Arguments", prompt=True )],
+        department: Annotated[str, Option(help="The department responsible for the project.", rich_help_panel="Required Arguments", prompt=True )],
+        location: Annotated[str, Option(help="The location specified in in the project onboarding list.", rich_help_panel="Required Arguments", prompt=True )]):
+    projectList = EmpireProjectList()
+    thisProject = EmpireProject.New( institution, title, pi, location, department)
+    projectList.Projects.append(thisProject)
+    projectList.Save()
 
 @app.command()
 def name(ctx: Context, name: str = "Bob"):
@@ -201,6 +270,10 @@ def CheckAccess():
 if __name__ == "__main__":
     # Check if this user is a member of the coordinator group
     # Only coordinator members can run this utility
+    if getpass.getuser() == "root":
+        EUtils.Error("This tool is not intended to be run by root. Cowardly refusing to launch.")
+        sys.exit(1)
+
     if CheckAccess() == False:
         EUtils.Error("You are not authorized to interact with this tool.")
         sys.exit(1)

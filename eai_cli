@@ -55,8 +55,8 @@ def add(ctx: Context,username: Annotated[str, Option(help="The username for the 
         email: Annotated[str, Option(help="The email address of the account holder.", rich_help_panel="Required Arguments", prompt=True)],
         phone: Annotated[str, Option(help="The phone number of the account holder.", rich_help_panel="Required Arguments", prompt=True)],
         institution: Annotated[str, Option(help="The username for the new account.", rich_help_panel="Required Arguments", prompt=True)],
-        pi: Annotated[bool, Option(help="The institution for the account. Must be one of ['cuny', 'suny', 'columbia', 'cornell', 'rpi', 'nyu'].", rich_help_panel="Optional Arguments" )] = False,
-        lab: Annotated[str, Option(help="Assign this user to a lab or existing Principal Investigator.", rich_help_panel="Optional Arguments" )] = None,
+        pi: Annotated[bool, Option(help="Record this user as a principal investigator to which other users can be assigned.", rich_help_panel="Optional Arguments" )] = False,
+        lab: Annotated[str, Option(help="Assign this user to an existing Principal Investigator by either email or full name.", rich_help_panel="Optional Arguments" )] = None,
         send_welcome: Annotated[bool, Option(help="Send a welcome email to the user when completed.", rich_help_panel="Optional Arguments" )] = True,
         coordinator: Annotated[bool, Option(help="Assign this user to the coordinator group as a technical coordinator for an institution.", rich_help_panel="Optional Arguments")] = False,
         ):
@@ -85,8 +85,12 @@ def add(ctx: Context,username: Annotated[str, Option(help="The username for the 
         EUtils.Warning(f"The supplied phone number ({phone}) could not be parsed as a United States phone number.")
     phone = formatted_phone
 
-    newUserSummary = PrettyTable(["Username", "Name", "Phone", "Email", "Institution", "Is PI"])
-    newUserSummary.add_row([username, f"{firstname} {lastname}", phone, email, institution, pi])
+    # As of 2/3/2025 users must be affiliated with a valid PI for reporting purposes.
+    # Verify that the supplied PI exists in the system.
+    # Note: For development purposes, and to keep all this data in Base Command there is a list of PI's in a note entry for the kmclennan user.
+
+    newUserSummary = PrettyTable(["Username", "Name", "Phone", "Email", "Institution", "Is PI", "Lab"])
+    newUserSummary.add_row([username, f"{firstname} {lastname}", phone, email, institution, pi, lab])
     print(newUserSummary)
     if EUtils.PromptConfirm("Create this user ([Y]|N)?") == False:
         EUtils.Warning("User cancelled request.")
@@ -102,8 +106,13 @@ def add(ctx: Context,username: Annotated[str, Option(help="The username for the 
     newUser.Phone = phone
     newUser.Email = email
     newUser.Institution = institution
+    
     newUser.RandomizePassword(28)
     newUser.Commit()
+
+    newUser.Lab = lab
+    newUser.Commit()
+    print(f"Set Lab: {newUser.Lab}")
 
     institutionGroup = EmpireGroup(institution)
     institutionGroup.AddMember(username)
